@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "70\u0027s Cosmo", "label": "70\u0027s Cosmo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Cosmo", "label": "Cosmo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Wanda", "label": "Wanda", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Timmy", "label": "Timmy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "70\u0027s Wanda", "label": "70\u0027s Wanda", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "A.J.", "label": "A.J.", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Chester", "label": "Chester", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Crocker", "label": "Crocker", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Doidle", "label": "Doidle", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Jorgen", "label": "Jorgen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Older Timmy", "label": "Older Timmy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Santa", "label": "Santa", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Star", "label": "Star", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Vicky", "label": "Vicky", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Crimson Chin", "label": "Crimson Chin", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Cupid", "label": "Cupid", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Future Timmy", "label": "Future Timmy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mama Cosma", "label": "Mama Cosma", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mr. Turner", "label": "Mr. Turner", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "The Easter Bunny", "label": "The Easter Bunny", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Twinkle", "label": "Twinkle", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Doidle as Timmy", "label": "Doidle as Timmy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mrs. Turner", "label": "Mrs. Turner", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Crash Nebula", "label": "Crash Nebula", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Chad", "label": "Chad", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Elmer", "label": "Elmer", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Waxelplax", "label": "Waxelplax", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Dr. Bender", "label": "Dr. Bender", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Francis", "label": "Francis", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mark", "label": "Mark", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Chet Ubetcha", "label": "Chet Ubetcha", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "King Gripullon", "label": "King Gripullon", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mayor", "label": "Mayor", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Queen Jipjorrulac", "label": "Queen Jipjorrulac", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Robot Vicky", "label": "Robot Vicky", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Trixie", "label": "Trixie", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Veronica", "label": "Veronica", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Wendell", "label": "Wendell", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Tad", "label": "Tad", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Young Mr. Turner", "label": "Young Mr. Turner", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Cleft", "label": "Cleft", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Bronze Kneecap", "label": "Bronze Kneecap", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"Weight Season": 15.0, "from": "70\u0027s Cosmo", "to": "Cosmo", "width": 1}, {"Weight Season": 1.0, "from": "70\u0027s Cosmo", "to": "Wanda", "width": 1}, {"Weight Season": 1.0, "from": "70\u0027s Cosmo", "to": "Timmy", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "70\u0027s Wanda", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "A.J.", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Chester", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Crocker", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Doidle", "width": 1}, {"Weight Season": 3.0, "from": "Cosmo", "to": "Jorgen", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Older Timmy", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Santa", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Star", "width": 1}, {"Weight Season": 41.0, "from": "Cosmo", "to": "Timmy", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Vicky", "width": 1}, {"Weight Season": 46.0, "from": "Cosmo", "to": "Wanda", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Crimson Chin", "width": 1}, {"Weight Season": 2.0, "from": "Cosmo", "to": "Cupid", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Future Timmy", "width": 1}, {"Weight Season": 6.0, "from": "Cosmo", "to": "Mama Cosma", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Mr. Turner", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "The Easter Bunny", "width": 1}, {"Weight Season": 1.0, "from": "Cosmo", "to": "Twinkle", "width": 1}, {"Weight Season": 14.0, "from": "Wanda", "to": "70\u0027s Wanda", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "A.J.", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Chester", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Crimson Chin", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Crocker", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Doidle as Timmy", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Future Timmy", "width": 1}, {"Weight Season": 2.0, "from": "Wanda", "to": "Jorgen", "width": 1}, {"Weight Season": 2.0, "from": "Wanda", "to": "Mama Cosma", "width": 1}, {"Weight Season": 4.0, "from": "Wanda", "to": "Santa", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "The Easter Bunny", "width": 1}, {"Weight Season": 64.0, "from": "Wanda", "to": "Timmy", "width": 1}, {"Weight Season": 2.0, "from": "Wanda", "to": "Vicky", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Doidle", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Mr. Turner", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Mrs. Turner", "width": 1}, {"Weight Season": 1.0, "from": "Wanda", "to": "Older Timmy", "width": 1}, {"Weight Season": 17.0, "from": "A.J.", "to": "Chester", "width": 1}, {"Weight Season": 3.0, "from": "A.J.", "to": "Crash Nebula", "width": 1}, {"Weight Season": 7.0, "from": "A.J.", "to": "Timmy", "width": 1}, {"Weight Season": 1.0, "from": "A.J.", "to": "Vicky", "width": 1}, {"Weight Season": 1.0, "from": "A.J.", "to": "Chad", "width": 1}, {"Weight Season": 1.0, "from": "A.J.", "to": "Elmer", "width": 1}, {"Weight Season": 1.0, "from": "A.J.", "to": "Mr. Turner", "width": 1}, {"Weight Season": 1.0, "from": "A.J.", "to": "Waxelplax", "width": 1}, {"Weight Season": 1.0, "from": "Chester", "to": "Chad", "width": 1}, {"Weight Season": 3.0, "from": "Chester", "to": "Crash Nebula", "width": 1}, {"Weight Season": 1.0, "from": "Chester", "to": "Dr. Bender", "width": 1}, {"Weight Season": 1.0, "from": "Chester", "to": "Elmer", "width": 1}, {"Weight Season": 2.0, "from": "Chester", "to": "Francis", "width": 1}, {"Weight Season": 1.0, "from": "Chester", "to": "Mark", "width": 1}, {"Weight Season": 1.0, "from": "Chester", "to": "Mr. Turner", "width": 1}, {"Weight Season": 8.0, "from": "Chester", "to": "Timmy", "width": 1}, {"Weight Season": 1.0, "from": "Chester", "to": "Vicky", "width": 1}, {"Weight Season": 1.0, "from": "Chester", "to": "Waxelplax", "width": 1}, {"Weight Season": 1.0, "from": "Crash Nebula", "to": "Mrs. Turner", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Chad", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Chet Ubetcha", "width": 1}, {"Weight Season": 10.0, "from": "Timmy", "to": "Crimson Chin", "width": 1}, {"Weight Season": 3.0, "from": "Timmy", "to": "Crocker", "width": 1}, {"Weight Season": 2.0, "from": "Timmy", "to": "Doidle as Timmy", "width": 1}, {"Weight Season": 2.0, "from": "Timmy", "to": "Dr. Bender", "width": 1}, {"Weight Season": 2.0, "from": "Timmy", "to": "Francis", "width": 1}, {"Weight Season": 2.0, "from": "Timmy", "to": "Future Timmy", "width": 1}, {"Weight Season": 3.0, "from": "Timmy", "to": "Jorgen", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "King Gripullon", "width": 1}, {"Weight Season": 7.0, "from": "Timmy", "to": "Mayor", "width": 1}, {"Weight Season": 16.0, "from": "Timmy", "to": "Mr. Turner", "width": 1}, {"Weight Season": 14.0, "from": "Timmy", "to": "Mrs. Turner", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Older Timmy", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Queen Jipjorrulac", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "The Easter Bunny", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Cupid", "width": 1}, {"Weight Season": 5.0, "from": "Timmy", "to": "Doidle", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Elmer", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Mama Cosma", "width": 1}, {"Weight Season": 2.0, "from": "Timmy", "to": "Mark", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Robot Vicky", "width": 1}, {"Weight Season": 13.0, "from": "Timmy", "to": "Santa", "width": 1}, {"Weight Season": 2.0, "from": "Timmy", "to": "Star", "width": 1}, {"Weight Season": 3.0, "from": "Timmy", "to": "Trixie", "width": 1}, {"Weight Season": 1.0, "from": "Timmy", "to": "Veronica", "width": 1}, {"Weight Season": 18.0, "from": "Timmy", "to": "Vicky", "width": 1}, {"Weight Season": 3.0, "from": "Timmy", "to": "Wendell", "width": 1}, {"Weight Season": 2.0, "from": "Timmy", "to": "Waxelplax", "width": 1}, {"Weight Season": 3.0, "from": "Vicky", "to": "Mark", "width": 1}, {"Weight Season": 6.0, "from": "Vicky", "to": "Mr. Turner", "width": 1}, {"Weight Season": 1.0, "from": "Vicky", "to": "Mrs. Turner", "width": 1}, {"Weight Season": 5.0, "from": "Vicky", "to": "Robot Vicky", "width": 1}, {"Weight Season": 8.0, "from": "Vicky", "to": "Doidle", "width": 1}, {"Weight Season": 1.0, "from": "Vicky", "to": "King Gripullon", "width": 1}, {"Weight Season": 1.0, "from": "Vicky", "to": "Queen Jipjorrulac", "width": 1}, {"Weight Season": 1.0, "from": "Chad", "to": "Tad", "width": 1}, {"Weight Season": 1.0, "from": "Chad", "to": "Trixie", "width": 1}, {"Weight Season": 1.0, "from": "Tad", "to": "Trixie", "width": 1}, {"Weight Season": 1.0, "from": "Trixie", "to": "Elmer", "width": 1}, {"Weight Season": 2.0, "from": "Trixie", "to": "Veronica", "width": 1}, {"Weight Season": 1.0, "from": "Dr. Bender", "to": "Wendell", "width": 1}, {"Weight Season": 2.0, "from": "Dr. Bender", "to": "Mrs. Turner", "width": 1}, {"Weight Season": 1.0, "from": "Francis", "to": "Crocker", "width": 1}, {"Weight Season": 3.0, "from": "Mark", "to": "King Gripullon", "width": 1}, {"Weight Season": 2.0, "from": "Mark", "to": "Queen Jipjorrulac", "width": 1}, {"Weight Season": 5.0, "from": "Mr. Turner", "to": "Mrs. Turner", "width": 1}, {"Weight Season": 8.0, "from": "Mr. Turner", "to": "Young Mr. Turner", "width": 1}, {"Weight Season": 1.0, "from": "Chet Ubetcha", "to": "Santa", "width": 1}, {"Weight Season": 3.0, "from": "Santa", "to": "Cupid", "width": 1}, {"Weight Season": 5.0, "from": "Santa", "to": "The Easter Bunny", "width": 1}, {"Weight Season": 2.0, "from": "Cleft", "to": "Bronze Kneecap", "width": 1}, {"Weight Season": 1.0, "from": "Cleft", "to": "Crimson Chin", "width": 1}, {"Weight Season": 2.0, "from": "Bronze Kneecap", "to": "Crimson Chin", "width": 1}, {"Weight Season": 1.0, "from": "Crimson Chin", "to": "Mayor", "width": 1}, {"Weight Season": 2.0, "from": "Crocker", "to": "Mrs. Turner", "width": 1}, {"Weight Season": 4.0, "from": "Crocker", "to": "Waxelplax", "width": 1}, {"Weight Season": 2.0, "from": "Doidle", "to": "Doidle as Timmy", "width": 1}, {"Weight Season": 1.0, "from": "Star", "to": "Cupid", "width": 1}, {"Weight Season": 1.0, "from": "Star", "to": "Mama Cosma", "width": 1}, {"Weight Season": 1.0, "from": "Star", "to": "Twinkle", "width": 1}, {"Weight Season": 1.0, "from": "Mrs. Turner", "to": "Young Mr. Turner", "width": 1}, {"Weight Season": 2.0, "from": "Cupid", "to": "Mama Cosma", "width": 1}, {"Weight Season": 1.0, "from": "Cupid", "to": "Twinkle", "width": 1}, {"Weight Season": 1.0, "from": "Cupid", "to": "The Easter Bunny", "width": 1}, {"Weight Season": 1.0, "from": "Mama Cosma", "to": "Twinkle", "width": 1}, {"Weight Season": 1.0, "from": "King Gripullon", "to": "Queen Jipjorrulac", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
